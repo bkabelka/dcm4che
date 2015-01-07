@@ -179,8 +179,14 @@ public class DicomImageReader extends ImageReader {
         if (isRLELossless())
             createImageType(bitsStored, dataType, true);
         
-        decompressor.setInput(iisOfFrame(0));
-        return decompressor.getRawImageType(0);
+        ImageInputStream frameImageStream = null;
+        try {
+            frameImageStream = iisOfFrame(0);
+            decompressor.setInput(iisOfFrame(0));
+            return decompressor.getRawImageType(0);
+        } finally {
+            SafeClose.close(frameImageStream);
+        }
     }
 
     private boolean isRLELossless() {
@@ -201,8 +207,14 @@ public class DicomImageReader extends ImageReader {
         else if (isRLELossless())
             imageType = createImageType(bitsStored, dataType, true);
         else {
-            decompressor.setInput(iisOfFrame(0));
-            return decompressor.getImageTypes(0);
+            ImageInputStream frameImageStream = null;
+            try {
+                frameImageStream = iisOfFrame(0);
+                decompressor.setInput(frameImageStream);
+                return decompressor.getImageTypes(0);
+            } finally {
+                SafeClose.close(frameImageStream);
+            }
         }
 
         return Collections.singletonList(imageType).iterator();
@@ -236,13 +248,15 @@ public class DicomImageReader extends ImageReader {
         checkIndex(frameIndex);
 
         if (decompressor != null) {
-            decompressor.setInput(iisOfFrame(frameIndex));
+            ImageInputStream frameInputStream = iisOfFrame(frameIndex);
+            decompressor.setInput(frameInputStream);
 
             if (LOG.isDebugEnabled())
                 LOG.debug("Start decompressing frame #" + (frameIndex + 1));
             Raster wr = pmi.decompress() == pmi && decompressor.canReadRaster()
                     ? decompressor.readRaster(0, decompressParam(param))
                     : decompressor.read(0, decompressParam(param)).getRaster();
+            frameInputStream.close();
             if (LOG.isDebugEnabled())
                 LOG.debug("Finished decompressing frame #" + (frameIndex + 1));
             return wr;
@@ -296,10 +310,12 @@ public class DicomImageReader extends ImageReader {
 
         WritableRaster raster;
         if (decompressor != null) {
-            decompressor.setInput(iisOfFrame(frameIndex));
+            ImageInputStream frameInputStream = iisOfFrame(frameIndex);
+            decompressor.setInput(frameInputStream);
             if (LOG.isDebugEnabled())
                 LOG.debug("Start decompressing frame #" + (frameIndex + 1));
             BufferedImage bi = decompressor.read(0, decompressParam(param));
+            frameInputStream.close();
             if (LOG.isDebugEnabled())
                 LOG.debug("Finished decompressing frame #" + (frameIndex + 1));
             if (samples > 1)
@@ -351,7 +367,6 @@ public class DicomImageReader extends ImageReader {
     private ImageInputStreamImpl iisOfFrame(int frameIndex)
             throws IOException {
         ImageInputStreamImpl siis = iis == null
-            // FIXME : When to close the stream? [bkabelka]
             ? new SegmentedInputImageStream2(pixeldataFragments, frameIndex, getByteOrder())
             : new SegmentedInputImageStream(iis, pixeldataFragments, frameIndex);
         return patchJpegLS != null
