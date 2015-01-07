@@ -58,7 +58,7 @@ public class DicomImageReaderSpi extends ImageReaderSpi {
     private static final String[] formatNames = { "dicom", "DICOM" };
     private static final String[] suffixes = { "dcm", "dic", "dicm", "dicom" };
     private static final String[] MIMETypes = { "application/dicom" };
-    private static final Class<?>[] inputTypes = { ImageInputStream.class };
+    private static final Class<?>[] inputTypes = { ImageInputStream.class, DicomMetaData.class };
 
     public DicomImageReaderSpi() {
         super(vendorName, version, formatNames, suffixes, MIMETypes, 
@@ -83,7 +83,17 @@ public class DicomImageReaderSpi extends ImageReaderSpi {
 
     @Override
     public boolean canDecodeInput(Object source) throws IOException {
-        ImageInputStream iis = (ImageInputStream) source;
+        return (source instanceof DicomMetaData) && canDecodeDicomMetaData( (DicomMetaData)source ) ||
+              ((source instanceof ImageInputStream) && canDecodeImageInputStream( (ImageInputStream)source ));
+    }
+    
+    private boolean canDecodeDicomMetaData( DicomMetaData data )
+    {
+        return (data.getFileMetaInformation() != null) && (data.getAttributes() != null);
+    }
+    
+    private boolean canDecodeImageInputStream( ImageInputStream iis ) throws IOException
+    {
         iis.mark();
         try {
             int tag = iis.read()
