@@ -28,25 +28,22 @@ import org.dcm4che3.util.StreamUtils;
  * 
  * @author bernhard.kabelka
  */
-public class BulkDataImageInputStream extends ImageInputStreamImpl
-{
+public class BulkDataImageInputStream extends ImageInputStreamImpl {
     
     private final BulkData data;
     private InputStream stream;
     
-    public BulkDataImageInputStream( BulkData data )
-    {
+    public BulkDataImageInputStream(BulkData data) {
         super();
         this.data = data;
     }
     
     @Override
-    public void seek( long pos ) throws IOException
-    {
-        super.seek( pos );
+    public void seek(long pos) throws IOException {
+        super.seek(pos);
         closeCurrentStream();
         stream = data.openStream();
-        StreamUtils.skipFully( stream, pos );
+        StreamUtils.skipFully(stream, pos);
     }
     
     @Override
@@ -63,7 +60,7 @@ public class BulkDataImageInputStream extends ImageInputStreamImpl
     }
 
     private boolean prepareRead() {
-        return (streamPos < data.offset + data.length);
+        return streamPos < data.offset + data.length;
     }
 
     @Override
@@ -81,16 +78,13 @@ public class BulkDataImageInputStream extends ImageInputStreamImpl
     }
     
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         super.close();
         closeCurrentStream();
     }
     
-    private void closeCurrentStream() throws IOException
-    {
-        if ( stream != null )
-        {
+    private void closeCurrentStream() throws IOException {
+        if (stream != null) {
             stream.close();
             stream = null;
         }

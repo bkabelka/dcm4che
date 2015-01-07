@@ -61,13 +61,13 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
     private int curSegment;
     private long curSegmentEnd;
 
-    public SegmentedInputImageStream2( Fragments pixeldataFragments, int frameIndex, ByteOrder byteOrder ) throws IOException
-    {
-        BulkData[] data = new BulkData[ pixeldataFragments.size() - (frameIndex + 1) ];
-        int[] length = new int[ data.length ];
+    public SegmentedInputImageStream2(Fragments pixeldataFragments, int frameIndex, ByteOrder byteOrder)
+    		throws IOException {
+        BulkData[] data = new BulkData[pixeldataFragments.size() - (frameIndex + 1)];
+        int[] length = new int[data.length];
         for (int i = 0; i < length.length; i++) {
             BulkData bulkData = (BulkData) pixeldataFragments.get(i+frameIndex+1);
-            data[ i ] = bulkData;
+            data[i] = bulkData;
             length[i] = bulkData.length;
         }
         this.segments = data;
@@ -90,9 +90,9 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
             int end = off + segmentLengths[i];
             if (pos < end) {
                 closeCurrentStream();
-                curStream = new BulkDataImageInputStream( segments[ i ] );
-                curStream.setByteOrder( segmentByteOrder );
-                curStream.seek( pos - off );
+                curStream = new BulkDataImageInputStream(segments[ i ]);
+                curStream.setByteOrder(segmentByteOrder);
+                curStream.seek(pos - off);
                 curSegment = i;
                 curSegmentEnd = end;
                 return;
@@ -144,16 +144,13 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
     }
     
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         super.close();
         closeCurrentStream();
     }
     
-    private void closeCurrentStream() throws IOException
-    {
-        if ( curStream != null )
-        {
+    private void closeCurrentStream() throws IOException {
+        if (curStream != null) {
             curStream.close();
             curStream = null;
         }
