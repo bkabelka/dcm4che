@@ -141,8 +141,7 @@ public class DicomImageReader extends ImageReader {
             boolean ignoreMetadata) {
         super.setInput(input, seekForwardOnly, ignoreMetadata);
         resetInternalState();
-        if ( input instanceof ImageInputStream )
-        {
+        if ( input instanceof ImageInputStream ) {
             iis = (ImageInputStream)input;
         }
     }
@@ -185,7 +184,7 @@ public class DicomImageReader extends ImageReader {
     }
 
     private boolean isRLELossless() {
-        return UID.RLELossless.equals( tsuid );
+        return UID.RLELossless.equals(tsuid);
     }
 
     @Override
@@ -249,17 +248,14 @@ public class DicomImageReader extends ImageReader {
             return wr;
         }
         ImageInputStream imageInputStream;
-        if ( iis == null )
-        {
+        if ( iis == null ) {
             // FIXME : Close stream! [bkabelka]
-            imageInputStream = new BulkDataImageInputStream( pixeldata );
-            imageInputStream.setByteOrder( getByteOrder() );
-            imageInputStream.seek( frameIndex * frameLength );
-        }
-        else
-        {
+            imageInputStream = new BulkDataImageInputStream(pixeldata);
+            imageInputStream.setByteOrder(getByteOrder());
+            imageInputStream.seek(frameIndex * frameLength);
+        } else {
             imageInputStream = iis;
-            iis.seek( pixeldata.offset + frameIndex * frameLength );
+            iis.seek(pixeldata.offset + frameIndex * frameLength);
         }
         WritableRaster wr = Raster.createWritableRaster(
                 createSampleModel(dataType, banded), null);
@@ -267,10 +263,10 @@ public class DicomImageReader extends ImageReader {
         if (buf instanceof DataBufferByte) {
             byte[][] data = ((DataBufferByte) buf).getBankData();
             for (byte[] bs : data)
-                imageInputStream.readFully( bs );
+                imageInputStream.readFully(bs);
         } else {
             short[] data = ((DataBufferUShort) buf).getData();
-            imageInputStream.readFully( data, 0, data.length );
+            imageInputStream.readFully(data, 0, data.length);
         }
         return wr;
     }
@@ -286,9 +282,10 @@ public class DicomImageReader extends ImageReader {
         return decompressParam;
     }
 
-    private ByteOrder getByteOrder()
-    {
-        return metadata.getAttributes().bigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
+    private ByteOrder getByteOrder() {
+        return metadata.getAttributes().bigEndian()
+        		? ByteOrder.BIG_ENDIAN
+        		: ByteOrder.LITTLE_ENDIAN;
     }
 
     @Override
@@ -353,16 +350,10 @@ public class DicomImageReader extends ImageReader {
     @SuppressWarnings("resource")
     private ImageInputStreamImpl iisOfFrame(int frameIndex)
             throws IOException {
-        ImageInputStreamImpl siis;
-        if ( iis == null )
-        {
+        ImageInputStreamImpl siis = iis == null
             // FIXME : When to close the stream? [bkabelka]
-            siis = new SegmentedInputImageStream2( pixeldataFragments, frameIndex, getByteOrder() );
-        }
-        else
-        {
-            siis = new SegmentedInputImageStream( iis, pixeldataFragments, frameIndex );
-        }
+            ? new SegmentedInputImageStream2(pixeldataFragments, frameIndex, getByteOrder())
+            : new SegmentedInputImageStream(iis, pixeldataFragments, frameIndex);
         return patchJpegLS != null
                 ? new PatchJPEGLSImageInputStream(siis, patchJpegLS)
                 : siis;
@@ -491,37 +482,27 @@ public class DicomImageReader extends ImageReader {
         if (metadata != null)
             return;
 
-        if ( input instanceof ImageInputStream )
-        {
+        if ( input instanceof ImageInputStream ) {
             DicomInputStream dis = null;
-            try
-            {
-                dis = new DicomInputStream( new ImageInputStreamAdapter( (ImageInputStream)input ) );
-                dis.setIncludeBulkData( IncludeBulkData.URI );
-                dis.setBulkDataDescriptor( BulkDataDescriptor.PIXELDATA );
-                dis.setURI( "java:iis" ); // avoid copy of pixeldata to temporary file
+            try {
+                dis = new DicomInputStream(new ImageInputStreamAdapter((ImageInputStream)input));
+                dis.setIncludeBulkData(IncludeBulkData.URI);
+                dis.setBulkDataDescriptor(BulkDataDescriptor.PIXELDATA);
+                dis.setURI("java:iis"); // avoid copy of pixeldata to temporary file
                 Attributes fmi = dis.readFileMetaInformation();
-                Attributes ds = dis.readDataset( -1, -1 );
-                metadata = new DicomMetaData( fmi, ds );
+                Attributes ds = dis.readDataset(-1, -1);
+                metadata = new DicomMetaData(fmi, ds);
                 tsuid = dis.getTransferSyntax();
+            } finally {
+                SafeClose.close(dis);
             }
-            finally
-            {
-                SafeClose.close( dis );
-            }
-        }
-        else if ( input instanceof DicomMetaData )
-        {
+        } else if ( input instanceof DicomMetaData ) {
             metadata = (DicomMetaData)input;
-            if ( metadata.getFileMetaInformation() == null )
-            {
-                throw new IllegalStateException( "File meta information not set" );
-            }
-            tsuid = metadata.getFileMetaInformation().getString( Tag.TransferSyntaxUID );
-        }
-        else
-        {
-            throw new IllegalStateException( "Input not set" );
+            if (metadata.getFileMetaInformation() == null)
+                throw new IllegalStateException("File meta information not set");
+            tsuid = metadata.getFileMetaInformation().getString(Tag.TransferSyntaxUID);
+        } else {
+            throw new IllegalStateException("Input not set");
         }
         
         Attributes ds = metadata.getAttributes();
@@ -539,12 +520,10 @@ public class DicomImageReader extends ImageReader {
             pmi = PhotometricInterpretation.fromString(
                     ds.getString(Tag.PhotometricInterpretation, "MONOCHROME2"));
             if (pixeldata instanceof BulkData) {
-                if ( iis != null )
-                {
+                if (iis != null)
                     iis.setByteOrder(ds.bigEndian() 
                             ? ByteOrder.BIG_ENDIAN
                             : ByteOrder.LITTLE_ENDIAN);
-                }
                 this.frameLength = pmi.frameLength(width, height, samples, bitsAllocated);
                 this.pixeldata = (BulkData) pixeldata;
             } else {

@@ -83,17 +83,15 @@ public class DicomImageReaderSpi extends ImageReaderSpi {
 
     @Override
     public boolean canDecodeInput(Object source) throws IOException {
-        return (source instanceof DicomMetaData) && canDecodeDicomMetaData( (DicomMetaData)source ) ||
-              ((source instanceof ImageInputStream) && canDecodeImageInputStream( (ImageInputStream)source ));
+        return source instanceof DicomMetaData && canDecodeDicomMetaData((DicomMetaData)source) ||
+              (source instanceof ImageInputStream && canDecodeImageInputStream((ImageInputStream)source));
     }
     
-    private boolean canDecodeDicomMetaData( DicomMetaData data )
-    {
-        return (data.getFileMetaInformation() != null) && (data.getAttributes() != null);
+    private boolean canDecodeDicomMetaData(DicomMetaData data) {
+        return data.getFileMetaInformation() != null && data.getAttributes() != null;
     }
     
-    private boolean canDecodeImageInputStream( ImageInputStream iis ) throws IOException
-    {
+    private boolean canDecodeImageInputStream(ImageInputStream iis) throws IOException {
         iis.mark();
         try {
             int tag = iis.read()
