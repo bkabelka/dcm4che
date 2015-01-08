@@ -142,7 +142,7 @@ public class DicomImageReader extends ImageReader {
         super.setInput(input, seekForwardOnly, ignoreMetadata);
         resetInternalState();
         if ( input instanceof ImageInputStream ) {
-            iis = (ImageInputStream)input;
+            iis = (ImageInputStream) input;
         }
     }
 
@@ -497,7 +497,7 @@ public class DicomImageReader extends ImageReader {
         if (metadata != null)
             return;
 
-        if ( input instanceof ImageInputStream ) {
+        if (input instanceof ImageInputStream) {
             DicomInputStream dis = null;
             try {
                 dis = new DicomInputStream(new ImageInputStreamAdapter((ImageInputStream)input));
@@ -509,10 +509,11 @@ public class DicomImageReader extends ImageReader {
                 metadata = new DicomMetaData(fmi, ds);
                 tsuid = dis.getTransferSyntax();
             } finally {
+                // FIXME : Really close stream here? [bkabelka]
                 SafeClose.close(dis);
             }
-        } else if ( input instanceof DicomMetaData ) {
-            metadata = (DicomMetaData)input;
+        } else if (input instanceof DicomMetaData) {
+            metadata = (DicomMetaData) input;
             if (metadata.getFileMetaInformation() == null)
                 throw new IllegalStateException("File meta information not set");
             tsuid = metadata.getFileMetaInformation().getString(Tag.TransferSyntaxUID);
