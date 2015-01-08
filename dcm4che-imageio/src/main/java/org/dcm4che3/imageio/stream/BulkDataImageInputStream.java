@@ -40,10 +40,15 @@ public class BulkDataImageInputStream extends ImageInputStreamImpl {
     
     @Override
     public void seek(long pos) throws IOException {
+        long oldPos = streamPos;
         super.seek(pos);
-        closeCurrentStream();
-        stream = data.openStream();
-        StreamUtils.skipFully(stream, pos);
+        if (pos < oldPos || stream == null) {
+            closeCurrentStream();
+            stream = data.openStream();
+            // The data.offset was already skipped automatically upon opening the stream.
+            oldPos = data.offset;
+        }
+        StreamUtils.skipFully(stream, pos - oldPos);
     }
     
     @Override

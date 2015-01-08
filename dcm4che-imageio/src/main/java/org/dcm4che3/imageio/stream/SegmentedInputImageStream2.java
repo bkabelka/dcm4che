@@ -92,7 +92,7 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
                 closeCurrentStream();
                 curStream = new BulkDataImageInputStream(segments[ i ]);
                 curStream.setByteOrder(segmentByteOrder);
-                curStream.seek(pos - off);
+                curStream.seek(segments[ i ].offset + pos - off);
                 curSegment = i;
                 curSegmentEnd = end;
                 return;
