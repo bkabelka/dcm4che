@@ -140,7 +140,7 @@ public class DicomImageReader extends ImageReader {
             boolean ignoreMetadata) {
         super.setInput(input, seekForwardOnly, ignoreMetadata);
         resetInternalState();
-        if ( input instanceof ImageInputStream ) {
+        if (input instanceof ImageInputStream) {
             iis = (ImageInputStream) input;
         }
     }
