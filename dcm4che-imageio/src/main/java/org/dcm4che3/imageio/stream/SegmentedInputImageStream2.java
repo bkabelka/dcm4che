@@ -54,10 +54,9 @@ import org.dcm4che3.data.Fragments;
  */
 public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
 
-    private final BulkData[] segments;
+    private final ImageInputStream[] segmentStreams;
     private final long[] segmentPositionsList;
     private final int[] segmentLengths;
-    private final ByteOrder segmentByteOrder;
     private ImageInputStream stream;
     private int curSegment;
     private long curSegmentEnd;
@@ -66,17 +65,17 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
     		throws IOException {
         long[] offsets = new long[pixeldataFragments.size()-(frameIndex+1)];
         int[] length = new int[offsets.length];
-        BulkData[] data = new BulkData[offsets.length];
+        ImageInputStream[] streams = new ImageInputStream[offsets.length];
         for (int i = 0; i < length.length; i++) {
             BulkData bulkData = (BulkData) pixeldataFragments.get(i+frameIndex+1);
-            data[i] = bulkData;
+            streams[i] = new BulkDataImageInputStream(bulkData);
+            streams[i].setByteOrder(byteOrder);
             offsets[i] = bulkData.offset;
             length[i] = bulkData.length;
         }
-        this.segments = data;
+        this.segmentStreams = streams;
         this.segmentPositionsList = offsets;
         this.segmentLengths = length;
-        this.segmentByteOrder = byteOrder;
         seek(0);
     }
 
@@ -93,9 +92,7 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
         for (int i = 0, off = 0; i < segmentLengths.length; i++) {
             int end = off + segmentLengths[i];
             if (pos < end) {
-                closeCurrentStream();
-                stream = new BulkDataImageInputStream(segments[ i ]);
-                stream.setByteOrder(segmentByteOrder);
+                stream = segmentStreams[ i ];
                 stream.seek(segmentPositionsList[i] + pos - off);
                 curSegment = i;
                 curSegmentEnd = end;
@@ -146,18 +143,12 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
         }
         return nbytes;
     }
-    
+
     @Override
     public void close() throws IOException {
         super.close();
-        closeCurrentStream();
-    }
-    
-    private void closeCurrentStream() throws IOException {
-        if (stream != null) {
-            stream.close();
-            stream = null;
-        }
+        for (int i = 0; i < segmentStreams.length; i++)
+            segmentStreams[i].close();
     }
 
 }
