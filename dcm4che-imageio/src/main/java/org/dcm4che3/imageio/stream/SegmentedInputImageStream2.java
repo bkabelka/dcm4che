@@ -55,22 +55,26 @@ import org.dcm4che3.data.Fragments;
 public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
 
     private final BulkData[] segments;
+    private final long[] segmentPositionsList;
     private final int[] segmentLengths;
     private final ByteOrder segmentByteOrder;
-    private ImageInputStream curStream;
+    private ImageInputStream stream;
     private int curSegment;
     private long curSegmentEnd;
 
     public SegmentedInputImageStream2(Fragments pixeldataFragments, int frameIndex, ByteOrder byteOrder)
     		throws IOException {
-        BulkData[] data = new BulkData[pixeldataFragments.size() - (frameIndex + 1)];
-        int[] length = new int[data.length];
+        long[] offsets = new long[pixeldataFragments.size()-(frameIndex+1)];
+        int[] length = new int[offsets.length];
+        BulkData[] data = new BulkData[offsets.length];
         for (int i = 0; i < length.length; i++) {
             BulkData bulkData = (BulkData) pixeldataFragments.get(i+frameIndex+1);
             data[i] = bulkData;
+            offsets[i] = bulkData.offset;
             length[i] = bulkData.length;
         }
         this.segments = data;
+        this.segmentPositionsList = offsets;
         this.segmentLengths = length;
         this.segmentByteOrder = byteOrder;
         seek(0);
@@ -90,9 +94,9 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
             int end = off + segmentLengths[i];
             if (pos < end) {
                 closeCurrentStream();
-                curStream = new BulkDataImageInputStream(segments[ i ]);
-                curStream.setByteOrder(segmentByteOrder);
-                curStream.seek(segments[ i ].offset + pos - off);
+                stream = new BulkDataImageInputStream(segments[ i ]);
+                stream.setByteOrder(segmentByteOrder);
+                stream.seek(segmentPositionsList[i] + pos - off);
                 curSegment = i;
                 curSegmentEnd = end;
                 return;
@@ -108,7 +112,7 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
             return -1;
 
         bitOffset = 0;
-        int val = curStream.read();
+        int val = stream.read();
         if (val != -1) {
             ++streamPos;
         }
@@ -122,7 +126,7 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
         if (streamPos < curSegmentEnd)
             return true;
 
-        if (curSegment >= segments.length)
+        if (curSegment >= segmentPositionsList.length)
             return false;
         
         seek(offsetOf(curSegment+1));
@@ -135,7 +139,7 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
             return -1;
 
         bitOffset = 0;
-        int nbytes = curStream.read(b, off,
+        int nbytes = stream.read(b, off,
                 Math.min(len, (int) (curSegmentEnd-streamPos)));
         if (nbytes != -1) {
             streamPos += nbytes;
@@ -150,9 +154,9 @@ public class SegmentedInputImageStream2 extends ImageInputStreamImpl {
     }
     
     private void closeCurrentStream() throws IOException {
-        if (curStream != null) {
-            curStream.close();
-            curStream = null;
+        if (stream != null) {
+            stream.close();
+            stream = null;
         }
     }
 
