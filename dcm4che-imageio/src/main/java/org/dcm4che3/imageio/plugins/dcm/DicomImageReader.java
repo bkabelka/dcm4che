@@ -499,7 +499,6 @@ public class DicomImageReader extends ImageReader {
                 metadata = new DicomMetaData(fmi, ds);
                 tsuid = dis.getTransferSyntax();
             } finally {
-                // FIXME : Really close stream here? [bkabelka]
                 SafeClose.close(dis);
             }
         } else if (input instanceof DicomMetaData) {
