@@ -39,6 +39,7 @@
 package org.dcm4che3.imageio.stream;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageInputStreamImpl;
@@ -52,22 +53,53 @@ import org.dcm4che3.data.Fragments;
  */
 public class SegmentedInputImageStream extends ImageInputStreamImpl {
 
-    private final ImageInputStream stream;
+    private final ImageInputStream[] segmentStreams;
     private final long[] segmentPositionsList;
     private final int[] segmentLengths;
+    private ImageInputStream stream;
     private int curSegment;
     private long curSegmentEnd;
 
     public SegmentedInputImageStream(ImageInputStream stream,
             Fragments pixeldataFragments, int frameIndex) throws IOException {
+    	this(stream, null, pixeldataFragments, frameIndex);
+    }
+
+    /**
+     * Creates a new segmented image input stream. This either uses the given
+     * image input stream for all segments, or (if the stream is {code null})
+     * the {@linkplain BulkData#openStream() streams of the individual
+     * segments}.
+     * 
+     * @param stream
+     *            combined image input stream of all segments (if available)
+     * @param byteOrder
+     *            byte order of the individual segment streams (if no combined
+     *            stream is provided)
+     * @param pixeldataFragments
+     *            pixel data fragments
+     * @param frameIndex
+     *            index of the desired image frame
+     * @throws IOException
+     */
+    public SegmentedInputImageStream(ImageInputStream stream, ByteOrder byteOrder,
+            Fragments pixeldataFragments, int frameIndex) throws IOException {
         long[] offsets = new long[pixeldataFragments.size()-(frameIndex+1)];
         int[] length = new int[offsets.length];
+        ImageInputStream[] streams = stream == null
+                ? new ImageInputStream[offsets.length]
+                : null;
         for (int i = 0; i < length.length; i++) {
             BulkData bulkData = (BulkData) pixeldataFragments.get(i+frameIndex+1);
             offsets[i] = bulkData.offset;
             length[i] = bulkData.length;
+            if (streams != null) {
+                streams[i] = new BulkDataImageInputStream(bulkData);
+                streams[i].setByteOrder(byteOrder);
+            }
         }
         this.stream = stream;
+        this.segmentStreams = streams;
         this.segmentPositionsList = offsets;
         this.segmentLengths = length;
         seek(0);
@@ -77,6 +109,7 @@ public class SegmentedInputImageStream extends ImageInputStreamImpl {
             long[] segmentPositionsList, int[] segmentLengths)
                     throws IOException {
         this.stream = stream;
+        this.segmentStreams = null;
         this.segmentPositionsList = segmentPositionsList.clone();
         this.segmentLengths = segmentLengths.clone();
         seek(0);
@@ -95,6 +128,8 @@ public class SegmentedInputImageStream extends ImageInputStreamImpl {
         for (int i = 0, off = 0; i < segmentLengths.length; i++) {
             int end = off + segmentLengths[i];
             if (pos < end) {
+                if (segmentStreams != null)
+                    stream = segmentStreams[ i ];
                 stream.seek(segmentPositionsList[i] + pos - off);
                 curSegment = i;
                 curSegmentEnd = end;
@@ -144,6 +179,14 @@ public class SegmentedInputImageStream extends ImageInputStreamImpl {
             streamPos += nbytes;
         }
         return nbytes;
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        if (segmentStreams != null)
+            for (int i = 0; i < segmentStreams.length; i++)
+                segmentStreams[i].close();
     }
 
 }

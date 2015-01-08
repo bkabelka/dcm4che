@@ -78,7 +78,6 @@ import org.dcm4che3.imageio.codec.jpeg.PatchJPEGLSImageInputStream;
 import org.dcm4che3.imageio.stream.BulkDataImageInputStream;
 import org.dcm4che3.imageio.stream.ImageInputStreamAdapter;
 import org.dcm4che3.imageio.stream.SegmentedInputImageStream;
-import org.dcm4che3.imageio.stream.SegmentedInputImageStream2;
 import org.dcm4che3.io.BulkDataDescriptor;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.io.DicomInputStream.IncludeBulkData;
@@ -286,12 +285,6 @@ public class DicomImageReader extends ImageReader {
         return decompressParam;
     }
 
-    private ByteOrder getByteOrder() {
-        return metadata.getAttributes().bigEndian()
-        		? ByteOrder.BIG_ENDIAN
-        		: ByteOrder.LITTLE_ENDIAN;
-    }
-
     @Override
     public BufferedImage read(int frameIndex, ImageReadParam param)
             throws IOException {
@@ -356,9 +349,11 @@ public class DicomImageReader extends ImageReader {
     @SuppressWarnings("resource")
     private ImageInputStreamImpl iisOfFrame(int frameIndex)
             throws IOException {
-        ImageInputStreamImpl siis = iis == null
-            ? new SegmentedInputImageStream2(pixeldataFragments, frameIndex, getByteOrder())
-            : new SegmentedInputImageStream(iis, pixeldataFragments, frameIndex);
+        ByteOrder byteOrder = metadata.getAttributes().bigEndian()
+                ? ByteOrder.BIG_ENDIAN
+                : ByteOrder.LITTLE_ENDIAN;
+        SegmentedInputImageStream siis = new SegmentedInputImageStream(
+                iis, byteOrder, pixeldataFragments, frameIndex);
         return patchJpegLS != null
                 ? new PatchJPEGLSImageInputStream(siis, patchJpegLS)
                 : siis;
